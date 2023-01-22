@@ -1,0 +1,31 @@
+from flask import Flask, jsonify
+from playwright.sync_api import sync_playwright
+
+
+def get_laptops():
+    #Iniciando uma nova instância do navegador:
+    playwright = sync_playwright().start()
+    browser = playwright.chromium.launch()
+    page = browser.new_context().new_page()
+    #Navegar até o site:
+    page.goto('https://webscraper.io/test-sites/e-commerce/allinone/computers/laptops')
+    #Selecionar os elementos HTML correspondentes às informações dos notebooks Lenovo e 
+    #armazená-los em uma variável:
+    laptops = page.query_selector_all('.thumbnail')
+    laptops = [
+        {
+            'name': laptop.query_selector('.title').inner_text,
+            'price': laptop.query_selector('.price').inner_text
+        } for laptop in laptops if 'Lenovo' in laptop.query_selector('.title').inner_text
+    ]
+    #Ordenar os laptops pelo preço:
+    laptops = sorted(laptops, key=lambda x: float(x['price'].replace('$','')))
+    #fechar o navegador
+    browser.close()
+    return laptops
+
+
+@app.route('/')
+def laptops():
+    laptops = get_laptops()
+    return jsonify(laptops)
